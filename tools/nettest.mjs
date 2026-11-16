@@ -8,7 +8,7 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const EDGE = process.env.EDGE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
-const page = pathToFileURL(resolve('dist/index.html')).href;
+const page = process.env.PAGE || pathToFileURL(resolve('dist/index.html')).href;   // PAGE=https://… tests a deployed build
 const outDir = process.argv[2] || tmpdir();
 const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const code = Array.from({ length: 4 }, () => L[Math.floor(Math.random() * L.length)]).join('');
