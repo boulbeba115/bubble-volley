@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Bubble Volley</title>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="ui">
+  <!-- ======================= HUD ======================= -->
+  <div id="hud" class="hidden">
+    <div class="scoreboard">
+      <div class="team t0">
+        <div class="name"><span class="serve" id="serve0"></span><span id="name0">YOU</span></div>
+        <div class="pips" id="pips0"></div>
+        <div class="power"><i id="pow0"></i></div>
+      </div>
+      <div class="score t0" id="score0">0</div>
+      <div class="mid"><span>FIRST TO</span><b id="targetLbl">7</b></div>
+      <div class="score t1" id="score1">0</div>
+      <div class="team t1">
+        <div class="name"><span id="name1">CPU</span><span class="serve" id="serve1"></span></div>
+        <div class="pips" id="pips1"></div>
+        <div class="power"><i id="pow1"></i></div>
+      </div>
+    </div>
+    <div id="rally" class="rally"><b id="rallyN">0</b> RALLY</div>
+    <button id="pauseBtn" class="icon-btn" data-action="pause" aria-label="Pause"><i></i><i></i></button>
+    <div id="ballMarker" class="ball-marker hidden"><span></span></div>
+    <div id="pops"></div>
+    <div id="banner" class="banner"></div>
+    <div id="flash"></div>
+    <div id="touch" class="touch">
+      <button data-touch="left">◀</button>
+      <button data-touch="right">▶</button>
+      <button data-touch="dash" class="dash">⚡</button>
+      <button data-touch="jump" class="jump">▲</button>
+    </div>
+  </div>
+
+  <!-- ======================= LOADING ======================= -->
+  <section class="screen show" id="scr-loading">
+    <div class="logo small"><span>BUBBLE</span><span>VOLLEY</span></div>
+    <div class="loadbar"><div id="loadFill"></div></div>
+    <div class="hint" id="loadText">Inflating the ball…</div>
+  </section>
+
+  <!-- ======================= TITLE ======================= -->
+  <section class="screen" id="scr-title">
+    <div class="logo"><span>BUBBLE</span><span>VOLLEY</span><em>BEACH CUP</em></div>
+    <nav class="menu">
+      <button class="btn primary" data-action="play">PLAY</button>
+      <button class="btn" data-action="online">PLAY ONLINE</button>
+      <button class="btn" data-action="help">HOW TO PLAY</button>
+      <button class="btn" data-action="settings">SETTINGS</button>
+    </nav>
+    <div class="record" id="record"></div>
+  </section>
+
+  <!-- ======================= MATCH SETUP ======================= -->
+  <section class="screen" id="scr-setup">
+    <div class="panel">
+      <h2>MATCH SETUP</h2>
+      <div class="row"><label>Mode</label>
+        <div class="seg" data-key="mode">
+          <button data-val="ai">1 Player<small>vs CPU</small></button>
+          <button data-val="cup">Beach Cup<small>3 rivals</small></button>
+          <button data-val="pvp">2 Players<small>same keyboard</small></button>
+        </div>
+      </div>
+      <div class="cup-info" id="cupInfo">
+        <span style="border-color:#ffa53d">Sandy</span><i>▶</i><span style="border-color:#ff7ad9">Coral</span><i>▶</i><span style="border-color:#a78bfa">Tsunami</span><i>▶</i>🏆
+      </div>
+      <div class="row"><label>Your blob</label><div class="seg swatch" data-key="color0" id="swatch0"></div></div>
+      <div class="row" id="rowColor1"><label>Player 2 blob</label><div class="seg swatch" data-key="color1" id="swatch1"></div></div>
+      <div class="row" id="rowDifficulty"><label>CPU skill</label>
+        <div class="seg" data-key="difficulty">
+          <button data-val="easy">Easy</button><button data-val="medium">Medium</button><button data-val="hard">Hard</button>
+        </div>
+      </div>
+      <div class="row"><label>Play to</label>
+        <div class="seg" data-key="target" data-num="1">
+          <button data-val="5">5</button><button data-val="7">7</button><button data-val="11">11</button><button data-val="15">15</button>
+        </div>
+      </div>
+      <div class="row" id="rowStyle"><label>Style</label>
+        <div class="seg" data-key="style">
+          <button data-val="classic">Classic</button><button data-val="chaos">Chaos</button><button data-val="moon">Low-G</button><button data-val="giant">Giant Ball</button>
+        </div>
+      </div>
+      <div class="row" id="rowArena"><label>Arena</label>
+        <div class="seg" data-key="arena">
+          <button data-val="day">Sunny Bay</button><button data-val="sunset">Sunset Cove</button><button data-val="night">Moonlight</button>
+        </div>
+      </div>
+      <div class="row"><label>Power-ups</label>
+        <div class="seg" data-key="powerups" data-bool="1">
+          <button data-val="true">On</button><button data-val="false">Off</button>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" data-action="back">BACK</button>
+        <button class="btn primary" data-action="start">START MATCH</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= ONLINE LOBBY ======================= -->
+  <section class="screen" id="scr-online">
+    <div class="panel narrow" style="align-items:stretch">
+      <h2>PLAY ONLINE</h2>
+      <div class="online-box" id="onlineChoose">
+        <button class="btn primary" data-action="hostRoom">CREATE ROOM</button>
+        <div class="or">— OR JOIN A FRIEND —</div>
+        <div class="join-row">
+          <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false" />
+          <button class="btn" data-action="joinRoom">JOIN</button>
+        </div>
+      </div>
+      <div class="online-box hidden" id="onlineWait">
+        <div class="online-note">Share this room code with your friend</div>
+        <div class="room-code" id="roomCode">----</div>
+        <div class="join-row"><input id="roomLink" readonly /><button class="btn" data-action="copyLink">COPY</button></div>
+        <div class="online-note">You play blue (left). The match uses your Match Setup options.</div>
+      </div>
+      <div id="onlineStatus"></div>
+      <div class="actions"><button class="btn ghost" data-action="leaveOnline">BACK</button></div>
+    </div>
+  </section>
+
+  <!-- ======================= HOW TO PLAY ======================= -->
+  <section class="screen" id="scr-help">
+    <div class="panel">
+      <h2>HOW TO PLAY</h2>
+      <div class="help-grid">
+        <div class="card t0">
+          <h3>Player 1</h3>
+          <div class="keys"><kbd>A</kbd><kbd>D</kbd> move</div>
+          <div class="keys"><kbd>W</kbd> or <kbd>Space</kbd> jump</div>
+          <div class="keys"><kbd>S</kbd> or <kbd>Shift</kbd> dash</div>
+        </div>
+        <div class="card t1">
+          <h3>Player 2</h3>
+          <div class="keys"><kbd>←</kbd><kbd>→</kbd> move</div>
+          <div class="keys"><kbd>↑</kbd> jump</div>
+          <div class="keys"><kbd>↓</kbd> dash</div>
+        </div>
+      </div>
+      <ul class="rules">
+        <li>Land the ball on the other side to score. Get <b>behind</b> the ball to send it forward.</li>
+        <li><b>Dash</b> to reach far balls — it works in the air too.</li>
+        <li>Every touch charges your <b>super meter</b>. When you glow, jump into the ball for a flaming <b>SUPER SPIKE</b>.</li>
+        <li>Pop the floating <b>bubbles</b> with the ball: 🍄 jumbo size, ⚡ turbo, 🐌 slows your rival, 🌙 moon ball, ⭐ instant super.</li>
+      </ul>
+      <div class="actions"><button class="btn primary" data-action="back">GOT IT</button></div>
+    </div>
+  </section>
+
+  <!-- ======================= SETTINGS ======================= -->
+  <section class="screen" id="scr-settings">
+    <div class="panel">
+      <h2>SETTINGS</h2>
+      <div class="row"><label for="volMusic">Music</label><input type="range" id="volMusic" min="0" max="1" step="0.05" /></div>
+      <div class="row"><label for="volSfx">Sound FX</label><input type="range" id="volSfx" min="0" max="1" step="0.05" /></div>
+      <div class="row"><label>Graphics</label>
+        <div class="seg" data-key="quality" data-store="settings">
+          <button data-val="high">High</button><button data-val="low">Fast</button>
+        </div>
+      </div>
+      <div class="row"><label>Screen shake</label>
+        <div class="seg" data-key="shake" data-store="settings" data-bool="1">
+          <button data-val="true">On</button><button data-val="false">Off</button>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" data-action="resetStats">RESET STATS</button>
+        <button class="btn primary" data-action="back">DONE</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= PAUSE ======================= -->
+  <section class="screen dim" id="scr-pause">
+    <div class="panel narrow">
+      <h2>PAUSED</h2>
+      <nav class="menu">
+        <button class="btn primary" data-action="resume">RESUME</button>
+        <button class="btn" data-action="restart">RESTART</button>
+        <button class="btn" data-action="settings">SETTINGS</button>
+        <button class="btn ghost" data-action="quit">QUIT TO MENU</button>
+      </nav>
+    </div>
+  </section>
+
+  <!-- ======================= RESULTS ======================= -->
+  <section class="screen" id="scr-results">
+    <div class="panel">
+      <div class="result-head" id="resHead">YOU WIN!</div>
+      <div class="result-score"><span class="t0" id="resS0">7</span><i>–</i><span class="t1" id="resS1">3</span></div>
+      <div class="stats" id="resStats"></div>
+      <div class="actions">
+        <button class="btn ghost" data-action="quit">MENU</button>
+        <button class="btn primary" data-action="restart" id="rematchBtn">REMATCH</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="wipe"></div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

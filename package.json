@@ -1,0 +1,24 @@
+{
+  "name": "bubble-volley",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Bubble Volley — a 3D beach volleyball arcade game",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "assets": "blender -b -P tools/build_assets.py -- src/assets/models",
+    "sim": "node tools/sim.mjs",
+    "nettest": "node tools/nettest.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/fredoka": "^5.3.0",
+    "peerjs": "^1.5.5",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.8",
+    "vite-plugin-singlefile": "^2.3.4"
+  }
+}
