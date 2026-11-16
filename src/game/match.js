@@ -1,10 +1,14 @@
 // Match rules: serving, rallies, scoring, win condition and statistics.
-import { FIXED_DT, NET_X, GROUND_Y, POWERUPS, STYLES } from '../config.js';
-import { createWorld, resetPositions, stepWorld } from './physics.js';
+import { FIXED_DT, NET_X, GROUND_Y, POWERUPS, STYLES, MUTATORS, DEUCE_CAP, COMEBACK_GAP, COMEBACK_BOOST } from '../config.js';
+import { createWorld, makeRules, resetPositions, stepWorld } from './physics.js';
 
 export class Match {
   constructor({ target = 7, powerups = true, style = 'classic', onEvent = () => {} } = {}) {
     const st = STYLES[style] || STYLES.classic;
+    this.party = !!st.party;
+    this.mutator = -1;
+    this.rulePoints = -1;
+    this.basePowerups = powerups;
     this.powerups = powerups || !!st.pickupEvery;
     this.pickupEvery = st.pickupEvery || 0;
     this.pickupTimer = this.pickupEvery ? 1.5 : 4 + Math.random() * 3;
@@ -26,18 +30,39 @@ export class Match {
     this.beginServe(server, delay);
   }
 
+  // Party style: draw a new rule every two points.
+  rollRule() {
+    const points = this.score[0] + this.score[1];
+    if (!this.party || points % 2 !== 0 || points === this.rulePoints) return;
+    this.rulePoints = points;
+    let i;
+    do { i = Math.floor(Math.random() * MUTATORS.length); } while (i === this.mutator);
+    this.mutator = i;
+    const mu = MUTATORS[i];
+    Object.assign(this.world.rules, makeRules(mu));
+    this.pickupEvery = mu.pickupEvery || 0;
+    this.powerups = this.basePowerups || !!mu.pickupEvery;
+    if (this.pickupEvery) this.pickupTimer = 1.2;
+    this.onEvent({ type: 'rule', label: mu.label });
+  }
+
   beginServe(server, delay = 0.9) {
     this.server = server;
     this.rally = 0;
     this.lastHitSide = -1;
+    this.rollRule();
+    // comeback help: the side trailing by a few points charges its super meter faster
+    for (const s of [0, 1]) this.world.boost[s] = this.score[1 - s] - this.score[s] >= COMEBACK_GAP ? COMEBACK_BOOST : 1;
     resetPositions(this.world, server);
     this.phase = 'serve';
     this.timer = delay;
     this.onEvent({ type: 'serve', side: server });
   }
 
-  isMatchPoint(side) {
-    return this.score[side] === this.target - 1 && this.score[side] > this.score[1 - side] - 0;
+  // win by two points; a hard cap keeps a deuce from going on forever
+  hasWon(side) {
+    const mine = this.score[side], theirs = this.score[1 - side];
+    return (mine >= this.target && mine - theirs >= 2) || mine >= this.target + DEUCE_CAP;
   }
 
   step(inputs) {
@@ -84,7 +109,7 @@ export class Match {
         this.stats.rallies++;
         e.scorer = scorer;
         e.rally = this.rally;
-        if (this.score[scorer] >= this.target) {
+        if (this.hasWon(scorer)) {
           this.phase = 'point'; this.timer = 2.2; this.winner = scorer;
         } else {
           this.phase = 'point'; this.timer = 1.7;

@@ -51,13 +51,40 @@ export const STYLES = {
   chaos:   { label: 'Chaos', pickupEvery: 2.4, powerGain: 2 },
   moon:    { label: 'Low Gravity', ballG: 0.55, playerG: 0.62 },
   giant:   { label: 'Giant Ball', ballR: 40 },
+  party:   { label: 'Party', party: true },
+};
+
+// Party style: a new one of these rules is drawn every two points.
+export const MUTATORS = [
+  { label: '🎈 GIANT BALL', ballR: 40 },
+  { label: '🌙 LOW GRAVITY', ballG: 0.55, playerG: 0.62 },
+  { label: '🐜 TINY BLOBS', blobScale: 0.7 },
+  { label: '🍄 JUMBO BLOBS', blobScale: 1.35 },
+  { label: '⚡ TURBO', speed: 1.3 },
+  { label: '🎁 BUBBLE STORM', pickupEvery: 2.4, powerGain: 2 },
+];
+
+export const DEUCE_CAP = 4;            // win by two, but never play more than this many points past the target
+export const COMEBACK_GAP = 3;         // trailing by this much charges the super meter faster
+export const COMEBACK_BOOST = 1.6;
+
+// Blob colours that have to be earned.
+export const LOCKED = {
+  '#2ed3c3': { id: 'rally', hint: 'Reach a 15-touch rally to unlock' },
+  '#f2c230': { id: 'cup', hint: 'Win the Beach Cup to unlock' },
 };
 
 // Beach Cup: three rivals of rising skill, each with a home arena and a twist.
 export const CUP = [
-  { name: 'SANDY',   color: '#ffa53d', difficulty: 'easy',   arena: 'day',    style: 'classic' },
-  { name: 'CORAL',   color: '#ff7ad9', difficulty: 'medium', arena: 'sunset', style: 'chaos' },
-  { name: 'TSUNAMI', color: '#a78bfa', difficulty: 'hard',   arena: 'night',  style: 'classic' },
+  // slow and never spikes, but rarely misjudges a ball
+  { name: 'SANDY',   tag: 'THE WALL',   color: '#ffa53d', difficulty: 'easy',   arena: 'day',    style: 'classic',
+    ai: { speed: 0.62, blunder: 0.13, noise: 26, jump: 0.1, set: 0, power: 0.2 } },
+  // quick, dashes and dives for everything, a little wild
+  { name: 'CORAL',   tag: 'THE DIVER',  color: '#ff7ad9', difficulty: 'medium', arena: 'sunset', style: 'chaos',
+    ai: { speed: 0.98, dash: 1, react: 0.12, set: 0.25, power: 0.4, blunder: 0.2 } },
+  // sets and power-spikes at every chance
+  { name: 'TSUNAMI', tag: 'THE SPIKER', color: '#a78bfa', difficulty: 'hard',   arena: 'night',  style: 'classic',
+    ai: { jump: 1, set: 0.95, power: 0.85 } },
 ];
 
 export const DIFFICULTY = {

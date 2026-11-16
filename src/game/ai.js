@@ -38,7 +38,7 @@ export function aiInput(ai, world, dt) {
     ai.smash = Math.random() < sk.jump;
     ai.canDash = Math.random() < sk.dash;
     ai.set = Math.random() < sk.set;                // receive with a soft set, then spike it
-    ai.aim = Math.random() < 0.55 ? -1 : Math.random() < 0.6 ? 0 : 1;   // -1 = toward net (power), 1 = away (drop)
+    ai.aim = Math.random() < (sk.power ?? 0.55) ? -1 : Math.random() < 0.6 ? 0 : 1;   // -1 = toward net (power), 1 = away (drop)
     ai.wait = sk.react * (0.6 + Math.random() * 0.8);
   }
   if (ai.wait > 0) ai.wait -= dt;

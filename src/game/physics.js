@@ -7,14 +7,22 @@ import {
 
 const HOME = [NET_X - 230, NET_X + 230];
 
+export function makeRules(style = {}) {
+  return {
+    ballG: style.ballG || 1, playerG: style.playerG || 1, ballR: style.ballR || BALL_R, powerGain: style.powerGain || 1,
+    blobScale: style.blobScale || 1, speed: style.speed || 1,
+  };
+}
+
 export function createWorld(style = {}) {
-  const rules = { ballG: style.ballG || 1, playerG: style.playerG || 1, ballR: style.ballR || BALL_R, powerGain: style.powerGain || 1 };
+  const rules = makeRules(style);
   return {
     rules,
     players: [makePlayer(0), makePlayer(1)],
     ball: { x: NET_X, y: 150, vx: 0, vy: 0, r: rules.ballR, held: true, spin: 0, hitCd: 0, dead: false, fire: false, moonT: 0 },
     pickup: null,           // { x, y, r, type, life }
     lastHit: -1,
+    boost: [1, 1],          // super-meter multiplier per side (comeback help)
     touches: [0, 0],        // consecutive touches by each side since the ball last crossed the net
     touchCd: 0,             // contacts closer together than this count as one touch
     events: [],
@@ -34,6 +42,7 @@ export function resetPositions(world, serverSide) {
   world.players.forEach((p, i) => { p.x = HOME[i]; p.y = GROUND_Y; p.vx = p.vy = 0; p.onGround = true; p.dashT = 0; p.bumpT = 0; });
   const b = world.ball;
   b.x = HOME[serverSide]; b.y = 190; b.vx = 0; b.vy = 0; b.held = true; b.dead = false; b.spin = 0; b.fire = false;
+  b.r = world.rules.ballR;
   world.lastHit = -1;
   world.touches[0] = world.touches[1] = 0;
   world.pickup = null;
@@ -58,7 +67,7 @@ function stepPlayer(world, p, input, dt) {
   p.dashCd -= dt; p.bumpCd -= dt;
   p.bumpT = Math.max(0, p.bumpT - dt);
   p.bigT = Math.max(0, p.bigT - dt); p.fastT = Math.max(0, p.fastT - dt); p.slowT = Math.max(0, p.slowT - dt);
-  const targetR = BUBBLE_R * (p.bigT > 0 ? 1.4 : 1);
+  const targetR = BUBBLE_R * world.rules.blobScale * (p.bigT > 0 ? 1.4 : 1);
   p.r += (targetR - p.r) * Math.min(1, 8 * dt);
   p.move = input.move || 0;
   if (input.move) p.facing = Math.sign(input.move);
@@ -76,7 +85,7 @@ function stepPlayer(world, p, input, dt) {
   }
   p.bumpHeld = !!input.bump;
 
-  const mul = p.speedMul * (p.fastT > 0 ? 1.4 : 1) * (p.slowT > 0 ? 0.5 : 1);
+  const mul = p.speedMul * world.rules.speed * (p.fastT > 0 ? 1.4 : 1) * (p.slowT > 0 ? 0.5 : 1);
   if (p.dashT > 0) {
     p.dashT -= dt;
     p.vx = p.dashDir * DASH_SPEED * (p.slowT > 0 ? 0.6 : 1);
@@ -197,7 +206,7 @@ function collidePlayer(world, ball, p) {
   ball.fire = false;
   clampSpeed(ball);
   ball.spin = (ball.vx * 0.012) + (p.vx * 0.01);
-  p.power = Math.min(1, p.power + POWER_PER_HIT * world.rules.powerGain);
+  p.power = Math.min(1, p.power + POWER_PER_HIT * world.rules.powerGain * world.boost[p.side]);
   world.events.push({
     type: 'hit', side: p.side, x: ball.x - nx * ball.r, y: ball.y - ny * ball.r,
     speed: Math.hypot(ball.vx, ball.vy), blocked: wasFire, low: GROUND_Y - ball.y < 70, dashing: p.dashT > 0,

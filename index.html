@@ -29,6 +29,7 @@
       </div>
     </div>
     <div id="rally" class="rally"><b id="rallyN">0</b> RALLY</div>
+    <div id="ruleChip" class="rule-chip hidden"></div>
     <button id="pauseBtn" class="icon-btn" data-action="pause" aria-label="Pause"><i></i><i></i></button>
     <div id="ballMarker" class="ball-marker hidden"><span></span></div>
     <div id="pops"></div>
@@ -78,6 +79,7 @@
       </div>
       <div class="row"><label>Your blob</label><div class="seg swatch" data-key="color0" id="swatch0"></div></div>
       <div class="row" id="rowColor1"><label>Player 2 blob</label><div class="seg swatch" data-key="color1" id="swatch1"></div></div>
+      <div id="skinHint"></div>
       <div class="row" id="rowDifficulty"><label>CPU skill</label>
         <div class="seg" data-key="difficulty">
           <button data-val="easy">Easy</button><button data-val="medium">Medium</button><button data-val="hard">Hard</button>
@@ -90,7 +92,7 @@
       </div>
       <div class="row" id="rowStyle"><label>Style</label>
         <div class="seg" data-key="style">
-          <button data-val="classic">Classic</button><button data-val="chaos">Chaos</button><button data-val="moon">Low-G</button><button data-val="giant">Giant Ball</button>
+          <button data-val="classic">Classic</button><button data-val="chaos">Chaos</button><button data-val="moon">Low-G</button><button data-val="giant">Giant</button><button data-val="party">Party</button>
         </div>
       </div>
       <div class="row" id="rowArena"><label>Arena</label>
@@ -207,6 +209,7 @@
       <div class="result-head" id="resHead">YOU WIN!</div>
       <div class="result-score"><span class="t0" id="resS0">7</span><i>–</i><span class="t1" id="resS1">3</span></div>
       <div class="stats" id="resStats"></div>
+      <div id="resNote"></div>
       <div class="actions">
         <button class="btn ghost" data-action="quit">MENU</button>
         <button class="btn primary" data-action="restart" id="rematchBtn">REMATCH</button>

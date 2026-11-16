@@ -1,5 +1,5 @@
 // DOM user interface: menus, HUD, banners and screen transitions.
-import { SKINS } from '../config.js';
+import { SKINS, LOCKED } from '../config.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -19,6 +19,7 @@ export class UI {
     for (const id of ['swatch0', 'swatch1']) {
       $(id).innerHTML = SKINS.map((c) => `<button data-val="${c}" style="background:${c};color:${c}" aria-label="blob colour"></button>`).join('');
     }
+    this.refreshLocks();
     // segmented controls bound to save.setup / save.settings
     document.querySelectorAll('.seg').forEach((seg) => {
       const store = save[seg.dataset.store || 'setup'];
@@ -26,6 +27,8 @@ export class UI {
       const parse = (v) => (seg.dataset.num ? Number(v) : seg.dataset.bool ? v === 'true' : v);
       const refresh = () => seg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', parse(b.dataset.val) === store[key]));
       seg.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+        if (b.classList.contains('locked')) { $('skinHint').textContent = '🔒 ' + LOCKED[b.dataset.val].hint; this.h.sound?.('wall'); return; }
+        if (seg.classList.contains('swatch')) $('skinHint').textContent = '';
         store[key] = parse(b.dataset.val);
         refresh(); this.h.sound?.('click'); this.h.change(key, store[key]); this.syncSetup();
       }));
@@ -179,7 +182,25 @@ export class UI {
     if (x != null) el.style.left = (Math.max(0.03, Math.min(0.97, x)) * 100) + '%';
   }
 
-  results({ title, cls, score, stats, next = 'REMATCH' }) {
+  // earned blob colours show a padlock until unlocked
+  refreshLocks() {
+    document.querySelectorAll('.seg.swatch button').forEach((b) => {
+      const lock = LOCKED[b.dataset.val];
+      const locked = !!lock && !this.save.unlocks[lock.id];
+      b.classList.toggle('locked', locked);
+      b.title = locked ? lock.hint : '';
+    });
+  }
+
+  // small chip under the scoreboard: current party rule or cup rival nickname
+  rule(text) {
+    $('ruleChip').textContent = text;
+    $('ruleChip').classList.toggle('hidden', !text);
+  }
+
+  results({ title, cls, score, stats, next = 'REMATCH', note = '' }) {
+    $('resNote').textContent = note;
+    this.refreshLocks();
     $('rematchBtn').textContent = next;
     const h = $('resHead');
     h.textContent = title; h.className = 'result-head ' + cls;

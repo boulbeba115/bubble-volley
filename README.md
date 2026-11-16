@@ -23,10 +23,12 @@ A 3D arcade beach-volleyball game with jelly blobs, built with three.js and Blen
 ## Modes
 
 - **1 Player** — against the CPU (easy / medium / hard).
-- **Beach Cup** — beat Sandy, Coral and Tsunami in a row to win the trophy.
+- **Beach Cup** — beat Sandy (the wall), Coral (the diver) and Tsunami (the spiker) in a row to win the trophy.
 - **2 Players** — on one keyboard.
 - **Play Online** — one player creates a room and shares the 4-letter code (or the invite link); the other joins.
-- **Styles** — Classic, Chaos (power-ups everywhere), Low Gravity, Giant Ball.
+- **Styles** — Classic, Chaos (power-ups everywhere), Low Gravity, Giant Ball, Party (a new random rule every two points).
+
+Matches are win-by-two (deuce), a player trailing by 3+ charges their super meter faster, and two blob colours are unlocked by a 15-touch rally and by winning the Beach Cup.
 
 ### About online play
 

@@ -182,6 +182,15 @@ kbd { display: inline-block; min-width: 30px; text-align: center; padding: 3px 8
 .team.t0 .touches { flex-direction: row-reverse; }
 .touch .bump { background: rgba(111, 220, 106, .5); }
 
+.rule-chip { position: absolute; top: max(12px, 1.6vh); left: 14px; font-size: 14px; font-weight: 600; letter-spacing: .08em;
+  background: var(--panel); border: 2px solid rgba(255, 255, 255, .2); padding: 8px 14px; border-radius: 14px; backdrop-filter: blur(10px); }
+.seg.swatch button.locked { opacity: .35; filter: grayscale(.6); position: relative; }
+.seg.swatch button.locked::after { content: '🔒'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; }
+#skinHint { text-align: center; font-size: 13.5px; color: var(--gold); min-height: 0; margin: -6px 0 8px; }
+#skinHint:empty { display: none; }
+#resNote { text-align: center; font-weight: 600; color: var(--gold); margin-top: 12px; }
+#resNote:empty { display: none; }
+
 #pops { position: absolute; inset: 0; pointer-events: none; }
 .pop-text { position: absolute; translate: -50% -50%; font-size: clamp(20px, 4.2vh, 40px); font-weight: 700; letter-spacing: .04em;
   white-space: nowrap; color: #fff; -webkit-text-stroke: .16em var(--ink); paint-order: stroke fill;

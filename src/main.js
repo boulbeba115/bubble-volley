@@ -18,6 +18,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const params = new URLSearchParams(location.search);
 const save = loadSave();
 if (params.get('arena')) save.setup.arena = params.get('arena');
+if (params.get('style')) save.setup.style = params.get('style');      // debug: force a game style
 
 const stage = new Stage(document.getElementById('game'));
 const audio = new AudioSys(save.settings);
@@ -116,7 +117,7 @@ function startGame(cfg) {
   const match = cfg.net === 'guest' ? new NetMatch({ ...opts, side: 1 }) : new Match(opts);
   const ais = [null, null];
   if (cfg.demo || cfg.spectate) { ais[0] = createAI(0, DIFFICULTY.medium); ais[1] = createAI(1, DIFFICULTY.hard); }
-  else if (cfg.mode === 'ai') ais[1] = createAI(1, DIFFICULTY[cfg.difficulty]);
+  else if (cfg.mode === 'ai') ais[1] = createAI(1, cfg.skill || DIFFICULTY[cfg.difficulty]);
   game = {
     me: -1, ...cfg, match, ais, first: true, charged: [false, false],
     remoteInput: NO_INPUT, outEvents: [], tick: 0, sentInput: '',
@@ -133,6 +134,7 @@ function launch(cfg) {
   stage.setArena(cfg.arena);
   stage.mode = 'game';
   ui.setupHUD(cfg.names, cfg.target);
+  ui.rule(cfg.chip || '');
   ui.hud(true);
   ui.screen(null);
   app = 'playing';
@@ -150,7 +152,7 @@ function beginMatch(spectate = false) {
     const r = CUP[cup.round];
     cfg = {
       ...base, mode: 'ai', cup: true, me: 0, names: ['YOU', r.name], difficulty: r.difficulty, arena: r.arena, style: r.style,
-      c1: otherColor(s.color0, r.color), intro: 'VS ' + r.name,
+      c1: otherColor(s.color0, r.color), intro: 'VS ' + r.name, chip: r.name + ' · ' + r.tag, skill: { ...DIFFICULTY[r.difficulty], ...r.ai },
     };
   } else if (s.mode === 'pvp') {
     cfg = { ...base, mode: 'pvp', names: ['PLAYER 1', 'PLAYER 2'], c1: otherColor(s.color0, s.color1) };
@@ -252,12 +254,15 @@ function finish(winner) {
     st.played++;
     if (won) { st.wins++; st.byDifficulty[g.difficulty]++; } else st.losses++;
   }
+  const unlock = (id) => (save.unlocks[id] ? false : (save.unlocks[id] = true));
+  let unlocked = !g.spectate && m.stats.longestRally >= 15 && unlock('rally');
   let title, next = 'REMATCH';
   if (g.spectate) title = `CPU ${winner + 1} WINS!`;
   else if (g.cup) {
     const rival = CUP[cup.round], last = cup.round === CUP.length - 1;
     if (won && last) {
       title = '🏆 CHAMPION!'; next = 'NEW CUP'; st.cups++; cup.round = 0;
+      unlocked = unlock('cup') || unlocked;
       fx.celebrate(-2.3, CONFETTI); fx.celebrate(2.3, CONFETTI); fx.celebrate(0, CONFETTI);
     } else if (won) { title = `YOU BEAT ${rival.name}!`; cup.round++; next = 'NEXT: ' + CUP[cup.round].name; }
     else { title = 'KNOCKED OUT'; next = 'TRY AGAIN'; }
@@ -271,7 +276,7 @@ function finish(winner) {
     if (game !== g || app !== 'results') return;
     ui.hud(false);
     ui.results({
-      title, next, cls: 't' + winner, score: m.score,
+      title, next, cls: 't' + winner, score: m.score, note: unlocked ? '🔓 New blob colour unlocked!' : '',
       stats: [
         [`${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, 'Match time'],
         [m.stats.longestRally, 'Longest rally'],
@@ -293,7 +298,14 @@ function onEvent(e) {
       ui.setScore(m.score, e.side);
       ui.rally(0);
       if (g.first) { ui.banner(g.intro || 'READY?', g.intro ? 'small' : '', 1.5); audio.count(false); }
-      else if (m.score[0] === m.target - 1 || m.score[1] === m.target - 1) ui.banner('MATCH POINT', 'gold small', 1.1);
+      else if (g.newRule) ui.banner(g.newRule, 'gold small', 1.3);
+      else {
+        const [a, b] = m.score, near = m.target - 1;
+        if (a >= near && b >= near && a === b) ui.banner('DEUCE!', 'gold small', 1.1);
+        else if ((a >= near && a > b) || (b >= near && b > a)) ui.banner('MATCH POINT', 'gold small', 1.1);
+        else if (Math.abs(a - b) >= 3) popAt('COMEBACK BOOST!', wx(m.world.players[a < b ? 0 : 1].x), 1.6, 'gold');
+      }
+      g.newRule = '';
       break;
     case 'drop':
       if (!quiet && g.first) { ui.banner('GO!', 'go', 0.8); audio.count(true); }
@@ -342,6 +354,10 @@ function onEvent(e) {
       ui.banner('SUPER SPIKE!', 'fire small', 0.9);
       break;
     }
+    case 'rule':                      // party style drew a new rule
+      g.newRule = e.label;
+      if (!quiet) { ui.rule(e.label); audio.charged(); }
+      break;
     case 'bumpReady': slimes[e.side].impulse(3.2); break;
     case 'fault': {
       // a fourth touch: the point goes to the other side
