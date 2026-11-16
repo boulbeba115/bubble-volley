@@ -93,6 +93,7 @@ export class Slime {
     let target = 1 + clamp(-p.vy / 3600, -0.16, 0.24);
     if (this.mood === 'sad') target -= 0.12;
     if (p.slowT > 0) target -= 0.1;
+    if (p.bumpT > 0) target += 0.2;                 // reaching up for a set
     this.sv += ((target - this.s) * 190 - this.sv * 7.5) * dt;
     this.s = clamp(this.s + this.sv * dt, 0.66, 1.5);
 

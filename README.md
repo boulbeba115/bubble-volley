@@ -6,16 +6,17 @@ A 3D arcade beach-volleyball game with jelly blobs, built with three.js and Blen
 
 ## Controls
 
-| | Move | Jump | Dash |
-|---|---|---|---|
-| Player 1 | `A` / `D` | `W` or `Space` | `S` or `Shift` |
-| Player 2 | `←` / `→` | `↑` | `↓` |
+| | Move | Jump | Dash | Bump (set) |
+|---|---|---|---|---|
+| Player 1 | `A` / `D` | `W` or `Space` | `S` or `Shift` | `E` or `F` |
+| Player 2 | `←` / `→` | `↑` | `↓` | `Enter` or right `Shift` |
 
 `Esc` pauses. When you are the only local player (vs CPU, Beach Cup, online) the arrow keys work too. Touch buttons appear on phones.
 
 ## How it plays
 
-- Land the ball on the other side to score. Get behind the ball to send it forward.
+- Land the ball on the other side to score. Each side gets **3 touches**; a 4th gives away the point.
+- **Bump** just before the ball arrives to pop it straight up, then **jump into it to spike**. In the air, hold toward the net for a power spike or away from it for a drop shot.
 - Every touch charges your **super meter**. When your blob glows, jump into the ball for a flaming **super spike**.
 - Pop the floating **bubbles** with the ball for power-ups: jumbo size, turbo, sticky rival, moon ball, instant super.
 

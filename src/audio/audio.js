@@ -88,6 +88,8 @@ export class AudioSys {
     const n = won ? [660, 880, 1320] : [440, 370, 294];
     n.forEach((f, i) => this.tone(f, 0.22, { type: 'triangle', vol: 0.16, at: 0.28 + i * 0.1 }));
   }
+  bump() { this.tone(392, 0.22, { type: 'sine', vol: 0.22, to: 784 }); this.tone(1176, 0.1, { type: 'triangle', vol: 0.06, at: 0.05 }); }
+  fault() { this.tone(160, 0.35, { type: 'sawtooth', vol: 0.2 }); this.tone(151, 0.35, { type: 'square', vol: 0.12 }); }
   dash() { this.noise(0.18, { vol: 0.16, freq: 900, q: 1.2, to: 3200 }); }
   superSpike() {
     this.tone(90, 0.5, { type: 'sawtooth', vol: 0.3, to: 40 });

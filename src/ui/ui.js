@@ -97,7 +97,7 @@ export class UI {
     this.setScore([0, 0], -1);
     this.rally(0);
     this.ballMarker(null);
-    this.power(0, 0); this.power(1, 0);
+    this.power(0, 0); this.power(1, 0); this.touches(0, 0); this.touches(1, 0);
     $('pops').innerHTML = '';
     const b = $('banner'); b.className = 'banner'; b.textContent = '';
   }
@@ -146,6 +146,13 @@ export class UI {
     const f = $('flash');
     f.style.background = color;
     f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+  }
+
+  touches(i, n) {
+    if (this['_tc' + i] === n) return;
+    this['_tc' + i] = n;
+    [...$('tch' + i).children].forEach((d, k) => d.classList.toggle('on', k < n));
+    $('tch' + i).classList.toggle('last', n >= 3);
   }
 
   power(i, v) {

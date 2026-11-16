@@ -32,7 +32,7 @@ let slowT = 0, hitStop = 0, acc = 0, time = 0, last = performance.now();
 const cup = { round: 0 };
 let guestColor = SKINS[1];      // online: colour requested by the joining player
 let snapBuffer = null;          // online guest: snapshots that arrive while the match screen is loading
-const NO_INPUT = { move: 0, jump: false, dash: false };
+const NO_INPUT = { move: 0, jump: false, dash: false, bump: false };
 const CONFETTI = ['#3ea6ff', '#ff5b7a', '#ffd166', '#6fdc6a', '#ffffff', '#b693ff'];
 
 const ui = new UI(save, {
@@ -210,7 +210,7 @@ net.onMessage = (msg) => {
   if (!msg || typeof msg !== 'object') return;
   if (net.role === 'host') {
     if (msg.t === 'hello') { if (SKINS.includes(msg.color)) guestColor = msg.color; startOnline(); }
-    else if (msg.t === 'i' && game?.net === 'host') game.remoteInput = { move: Math.sign(msg.m) || 0, jump: !!msg.j, dash: !!msg.d };
+    else if (msg.t === 'i' && game?.net === 'host') game.remoteInput = { move: Math.sign(msg.m) || 0, jump: !!msg.j, dash: !!msg.d, bump: !!msg.b };
     else if (msg.t === 'rematch' && app === 'results') startOnline();
   } else if (net.role === 'guest') {
     if (msg.t === 'start') {
@@ -275,7 +275,7 @@ function finish(winner) {
       stats: [
         [`${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, 'Match time'],
         [m.stats.longestRally, 'Longest rally'],
-        [`${m.stats.supers[0]} / ${m.stats.supers[1]}`, 'Super spikes'],
+        [`${m.stats.spikes[0] + m.stats.supers[0]} / ${m.stats.spikes[1] + m.stats.supers[1]}`, 'Spikes'],
         [Math.round(m.stats.topSpeed / 9) + ' km/h', 'Top speed'],
       ],
     });
@@ -310,8 +310,13 @@ function onEvent(e) {
       if (e.blocked) fx.explode(X, Y, ['#ffc23d', '#ffffff', TEAM_COLORS[e.side]], 30, 5);
       if (quiet) break;
       if (e.blocked) { audio.block(); stage.addShake(0.2); popAt('BLOCKED!', X, Y + 0.5, 'p' + e.side); }
-      else if (power > 0.82) { audio.smash(); stage.addShake(0.14); hitStop = 0.04; popAt('SPIKE!', X, Y + 0.5, 'p' + e.side); }
-      else {
+      else if (e.bump) { audio.bump(); fx.ring(X, Y, 0.2, '#ffffff', { from: 0.2, to: 0.8, life: 0.3 }); popAt('SET!', X, Y + 0.5, 'p' + e.side); }
+      else if (e.spike === 1) { audio.bounce(0.9); popAt('DROP SHOT!', X, Y + 0.5, 'p' + e.side); }
+      else if (e.spike || power > 0.82) {
+        audio.smash(); stage.addShake(e.spike === 3 ? 0.2 : 0.14); if (!g.net) hitStop = 0.04;
+        if (e.spike === 3) fx.ring(X, Y, 0.2, TEAM_COLORS[e.side], { from: 0.2, to: 1.5, life: 0.3 });
+        popAt(e.spike === 3 ? 'POWER SPIKE!' : 'SPIKE!', X, Y + 0.5, 'p' + e.side);
+      } else {
         audio.bounce(power);
         if (e.low) popAt(e.dashing ? 'DIVE SAVE!' : 'SAVE!', X, Y + 0.5, 'p' + e.side);
       }
@@ -335,6 +340,15 @@ function onEvent(e) {
       stage.addShake(0.4); stage.punch = 0.7; hitStop = g.net ? 0 : 0.13;
       ui.flash('#ffb060');
       ui.banner('SUPER SPIKE!', 'fire small', 0.9);
+      break;
+    }
+    case 'bumpReady': slimes[e.side].impulse(3.2); break;
+    case 'fault': {
+      // a fourth touch: the point goes to the other side
+      const X = wx(e.x), Y = wy(e.y);
+      fx.explode(X, Y, ['#ffffff', TEAM_COLORS[e.side]], 24, 4);
+      if (!quiet) { audio.fault(); popAt('4 TOUCHES!', X, Y + 0.6, 'fire'); }
+      scored(e, g, m, quiet);
       break;
     }
     case 'dash': {
@@ -376,24 +390,31 @@ function onEvent(e) {
         fx.sand(X, 3);
         if (!quiet) { audio.boom(); ui.flash('#ffd0a0'); stage.addShake(0.3); }
       }
-      if (e.scorer == null) break;
-      slimes[e.scorer].setMood('happy'); slimes[1 - e.scorer].setMood('sad');
-      slimes[1 - e.scorer].wobble(5);
-      stage.cheer();
-      fx.burst(wx(m.world.players[e.scorer].x), 1.4, [TEAM_COLORS[e.scorer], '#ffffff', '#ffd166']);
-      if (quiet) break;
-      stage.addShake(0.32); stage.punch = 0.5;
-      if (!g.net) slowT = 0.5;                    // no slow motion online: both clients must stay in step
-      audio.sandHit(); audio.whistle();
-      const final = m.winner >= 0;
-      audio.point(g.me < 0 || e.scorer === g.me);
-      ui.setScore(m.score, e.scorer, e.scorer);
-      ui.rally(0);
-      ui.banner(final ? 'GAME!' : e.rally <= 1 ? 'ACE!' : 'POINT!', 'p' + e.scorer, final ? 1.8 : 1.15);
+      if (!quiet && e.scorer != null) audio.sandHit();
+      scored(e, g, m, quiet);
       break;
     }
     case 'over': pendingOver = e.winner; break;
   }
+}
+
+// a point was just won (ball landed, or the other side used a fourth touch)
+function scored(e, g, m, quiet) {
+  if (e.scorer == null) return;
+  slimes[e.scorer].setMood('happy'); slimes[1 - e.scorer].setMood('sad');
+  slimes[1 - e.scorer].wobble(5);
+  stage.cheer();
+  fx.burst(wx(m.world.players[e.scorer].x), 1.4, [TEAM_COLORS[e.scorer], '#ffffff', '#ffd166']);
+  if (quiet) return;
+  stage.addShake(0.32); stage.punch = 0.5;
+  if (!g.net) slowT = 0.5;                        // no slow motion online: both clients must stay in step
+  audio.whistle();
+  const final = m.winner >= 0;
+  audio.point(g.me < 0 || e.scorer === g.me);
+  ui.setScore(m.score, e.scorer, e.scorer);
+  ui.rally(0);
+  const text = final ? 'GAME!' : e.type === 'fault' ? 'FAULT!' : e.rally <= 1 ? 'ACE!' : 'POINT!';
+  ui.banner(text, 'p' + e.scorer, final ? 1.8 : 1.15);
 }
 
 // ------------------------------------------------------------------ main loop
@@ -401,8 +422,8 @@ function localInputs(g, m) {
   if (g.net === 'host') return [input.player(0, false), g.remoteInput];
   if (g.net === 'guest') {
     const mine = input.player(0, false);
-    const key = `${mine.move}|${mine.jump}|${mine.dash}`;
-    if (key !== g.sentInput || g.tick % 12 === 0) { g.sentInput = key; net.send({ t: 'i', m: mine.move, j: mine.jump, d: mine.dash }); }
+    const key = `${mine.move}|${mine.jump}|${mine.dash}|${mine.bump}`;
+    if (key !== g.sentInput || g.tick % 12 === 0) { g.sentInput = key; net.send({ t: 'i', m: mine.move, j: mine.jump, d: mine.dash, b: mine.bump }); }
     return [NO_INPUT, mine];
   }
   return [0, 1].map((i) => {
@@ -446,7 +467,7 @@ function frame(now) {
     w.players.forEach((p, i) => {
       if (p.power >= 1 && Math.random() < 0.5) fx.sparkle(wx(p.x), wy(p.y), Math.random() < 0.5 ? '#ffc23d' : '#fff3b0');
       if (p.fastT > 0 && Math.abs(p.vx) > 200 && Math.random() < 0.5) fx.sparkle(wx(p.x), wy(p.y) - 0.3, POWERUPS.fast.color);
-      if (!g.demo) ui.power(i, p.power);
+      if (!g.demo) { ui.power(i, p.power); ui.touches(i, w.ball.dead || w.ball.held ? 0 : w.touches[i]); }
     });
   }
   if (pendingOver >= 0) {

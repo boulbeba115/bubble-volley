@@ -17,7 +17,7 @@ function play(a, b, target = 7) {
 }
 
 for (const [a, b] of [['easy', 'easy'], ['medium', 'medium'], ['hard', 'hard'], ['easy', 'hard'], ['medium', 'hard'], ['easy', 'medium']]) {
-  let wins = [0, 0], secs = 0, longest = 0, hits = 0, rallies = 0, unfinished = 0;
+  let wins = [0, 0], secs = 0, longest = 0, hits = 0, rallies = 0, unfinished = 0, faults = 0, spikes = 0;
   const N = 20;
   for (let i = 0; i < N; i++) {
     const r = play(a, b);
@@ -25,6 +25,7 @@ for (const [a, b] of [['easy', 'easy'], ['medium', 'medium'], ['hard', 'hard'], 
     wins[r.score[0] > r.score[1] ? 0 : 1]++;
     secs += r.secs; longest = Math.max(longest, r.stats.longestRally);
     hits += r.stats.hits[0] + r.stats.hits[1]; rallies += r.stats.rallies;
+    faults += r.stats.faults[0] + r.stats.faults[1]; spikes += r.stats.spikes[0] + r.stats.spikes[1];
   }
-  console.log(`${a} vs ${b}: wins ${wins[0]}-${wins[1]}  avg ${(secs / N).toFixed(0)}s  hits/rally ${(hits / rallies).toFixed(1)}  longest ${longest}  unfinished ${unfinished}`);
+  console.log(`${a} vs ${b}: wins ${wins[0]}-${wins[1]}  avg ${(secs / N).toFixed(0)}s  hits/rally ${(hits / rallies).toFixed(1)}  longest ${longest}  spikes/rally ${(spikes / rallies).toFixed(2)}  faults ${(100 * faults / rallies).toFixed(0)}%  unfinished ${unfinished}`);
 }

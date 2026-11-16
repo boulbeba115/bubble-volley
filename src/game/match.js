@@ -19,7 +19,7 @@ export class Match {
     this.lastHitSide = -1;
     this.time = 0;
     this.winner = -1;
-    this.stats = { longestRally: 0, hits: [0, 0], jumps: [0, 0], supers: [0, 0], topSpeed: 0, duration: 0, rallies: 0 };
+    this.stats = { longestRally: 0, hits: [0, 0], jumps: [0, 0], supers: [0, 0], spikes: [0, 0], faults: [0, 0], topSpeed: 0, duration: 0, rallies: 0 };
   }
 
   start(server = Math.random() < 0.5 ? 0 : 1, delay = 1.0) {
@@ -68,6 +68,7 @@ export class Match {
         this.stats.hits[e.side]++;
         this.stats.longestRally = Math.max(this.stats.longestRally, this.rally);
         this.stats.topSpeed = Math.max(this.stats.topSpeed, e.speed);
+        if (e.spike) this.stats.spikes[e.side]++;
         e.rally = this.rally;
       } else if (e.type === 'super' && this.phase === 'play') {
         this.rally++;
@@ -76,8 +77,9 @@ export class Match {
         this.stats.topSpeed = Math.max(this.stats.topSpeed, 1080);
       } else if (e.type === 'jump') {
         this.stats.jumps[e.side]++;
-      } else if (e.type === 'ground' && this.phase === 'play') {
+      } else if ((e.type === 'ground' || e.type === 'fault') && this.phase === 'play') {
         const scorer = 1 - e.side;
+        if (e.type === 'fault') this.stats.faults[e.side]++;
         this.score[scorer]++;
         this.stats.rallies++;
         e.scorer = scorer;

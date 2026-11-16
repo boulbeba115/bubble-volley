@@ -16,6 +16,7 @@
         <div class="name"><span class="serve" id="serve0"></span><span id="name0">YOU</span></div>
         <div class="pips" id="pips0"></div>
         <div class="power"><i id="pow0"></i></div>
+        <div class="touches" id="tch0"><i></i><i></i><i></i></div>
       </div>
       <div class="score t0" id="score0">0</div>
       <div class="mid"><span>FIRST TO</span><b id="targetLbl">7</b></div>
@@ -24,6 +25,7 @@
         <div class="name"><span id="name1">CPU</span><span class="serve" id="serve1"></span></div>
         <div class="pips" id="pips1"></div>
         <div class="power"><i id="pow1"></i></div>
+        <div class="touches" id="tch1"><i></i><i></i><i></i></div>
       </div>
     </div>
     <div id="rally" class="rally"><b id="rallyN">0</b> RALLY</div>
@@ -35,6 +37,7 @@
     <div id="touch" class="touch">
       <button data-touch="left">◀</button>
       <button data-touch="right">▶</button>
+      <button data-touch="bump" class="bump">●</button>
       <button data-touch="dash" class="dash">⚡</button>
       <button data-touch="jump" class="jump">▲</button>
     </div>
@@ -140,16 +143,20 @@
           <div class="keys"><kbd>A</kbd><kbd>D</kbd> move</div>
           <div class="keys"><kbd>W</kbd> or <kbd>Space</kbd> jump</div>
           <div class="keys"><kbd>S</kbd> or <kbd>Shift</kbd> dash</div>
+          <div class="keys"><kbd>E</kbd> or <kbd>F</kbd> bump (set)</div>
         </div>
         <div class="card t1">
           <h3>Player 2</h3>
           <div class="keys"><kbd>←</kbd><kbd>→</kbd> move</div>
           <div class="keys"><kbd>↑</kbd> jump</div>
           <div class="keys"><kbd>↓</kbd> dash</div>
+          <div class="keys"><kbd>Enter</kbd> or <kbd>R-Shift</kbd> bump (set)</div>
         </div>
       </div>
       <ul class="rules">
-        <li>Land the ball on the other side to score. Get <b>behind</b> the ball to send it forward.</li>
+        <li>Land the ball on the other side to score. Each side gets <b>3 touches</b> — a 4th gives away the point.</li>
+        <li><b>Bump</b> just before the ball arrives to pop it straight up (a set), then <b>jump into it to spike</b>.</li>
+        <li>Aim spikes while in the air: hold <b>toward the net</b> for a power spike, <b>away</b> for a soft drop shot.</li>
         <li><b>Dash</b> to reach far balls — it works in the air too.</li>
         <li>Every touch charges your <b>super meter</b>. When you glow, jump into the ball for a flaming <b>SUPER SPIKE</b>.</li>
         <li>Pop the floating <b>bubbles</b> with the ball: 🍄 jumbo size, ⚡ turbo, 🐌 slows your rival, 🌙 moon ball, ⭐ instant super.</li>

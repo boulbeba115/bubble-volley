@@ -1,10 +1,9 @@
 // Computer opponent. Works for either side by mirroring the court so the
 // logic can always think "I am on the right, the net is on my left".
-import { W, GROUND_Y, NET_X, BALL_GRAVITY, WALL_RESTITUTION } from '../config.js';
-
+import { W, GROUND_Y, NET_X, BALL_GRAVITY, WALL_RESTITUTION, MAX_TOUCHES } from '../config.js';
 
 export function createAI(side, skill) {
-  return { side, skill, err: 0, lastDir: 0, wait: 0, smash: false, touches: 0, prevVy: 0 };
+  return { side, skill, err: 0, lastDir: 0, wait: 0, smash: false, canDash: false, set: false, aim: 0, peak: 0, prevVy: 0 };
 }
 
 function predict(bx, by, vx, vy, g, HIT_Y, BALL_R) {
@@ -25,12 +24,12 @@ export function aiInput(ai, world, dt) {
   const me = world.players[ai.side];
   const b = world.ball;
   const sk = ai.skill;
-  const out = { move: 0, jump: false, dash: false };
+  const out = { move: 0, jump: false, dash: false, bump: false };
   const R = me.r, BALL_R = b.r;
 
   const bx = mx(b.x), bvx = b.vx * m, px = mx(me.x);
   const dir = Math.sign(bvx);
-  // re-roll the aiming error whenever the ball changes direction (new shot)
+  // re-roll the plan whenever the ball changes direction (new shot)
   if (dir !== ai.lastDir) {
     ai.lastDir = dir;
     ai.err = (Math.random() * 2 - 1) * sk.noise;
@@ -38,14 +37,21 @@ export function aiInput(ai, world, dt) {
     if (Math.random() < sk.blunder) ai.err = (Math.random() < 0.5 ? -1 : 1) * (95 + Math.random() * 70);
     ai.smash = Math.random() < sk.jump;
     ai.canDash = Math.random() < sk.dash;
+    ai.set = Math.random() < sk.set;                // receive with a soft set, then spike it
+    ai.aim = Math.random() < 0.55 ? -1 : Math.random() < 0.6 ? 0 : 1;   // -1 = toward net (power), 1 = away (drop)
     ai.wait = sk.react * (0.6 + Math.random() * 0.8);
   }
   if (ai.wait > 0) ai.wait -= dt;
-  // count our own consecutive touches (ball bounced upward on our side)
-  if (bx < NET_X || b.held || b.dead) ai.touches = 0;
-  else if (ai.prevVy > 0 && b.vy < 0) ai.touches++;
+
+  // highest point of the current arc: a ball falling from low down has too little energy to jump-spike
+  if (b.vy < 0 && ai.prevVy >= 0) ai.peak = 0;
   ai.prevVy = b.vy;
-  const push = ai.touches > 0;     // ball is stuck on our side: get it over
+  ai.peak = Math.max(ai.peak, GROUND_Y - b.y);
+  const lazy = b.held || ai.peak < R + 170;
+
+  const used = world.touches[ai.side];              // touches our side has already spent
+  const mustSend = used >= 1;                       // from the second touch on, get it over the net
+  const lastChance = used >= MAX_TOUCHES - 1;
 
   let target = NET_X + (W - NET_X) * 0.45;
   let incoming = false, eta = 99;
@@ -58,12 +64,16 @@ export function aiInput(ai, world, dt) {
       incoming = true;
       // stand slightly behind the ball so it bounces back toward the net
       const closeToNet = p.x < NET_X + 120;
-      target = p.x + (push ? 44 : (closeToNet ? sk.aim * 0.5 : sk.aim) + ai.err);
+      const willSet = !lastChance && (lazy || (ai.set && used === 0));
+      const behind = willSet ? 4 : lastChance ? 52 : mustSend ? 42 : (closeToNet ? sk.aim * 0.5 : sk.aim);
+      target = p.x + behind + (mustSend ? 0 : ai.err);
     }
   }
   const minX = NET_X + R + 10, maxX = W - R - 4;
   target = Math.max(minX, Math.min(maxX, target));
 
+  const dx = bx - px, h = GROUND_Y - b.y;
+  const contactSoon = Math.hypot(dx, b.y - me.y) < R + BALL_R + 34;
   if (ai.wait <= 0 || !incoming) {
     const diff = target - px;
     const dead = incoming ? 6 : 18;
@@ -74,15 +84,21 @@ export function aiInput(ai, world, dt) {
     }
   }
 
+  // soft set straight up: on the first touch if that is the plan, and whenever the ball is too lazy to spike
+  const wantSet = !lastChance && (lazy || (ai.set && used === 0));
+  if (incoming && wantSet && me.onGround && b.vy > 0 && contactSoon && me.power < 1) out.bump = true;
+
   // jump to spike when the ball is dropping close above us
-  if (incoming && (ai.smash || push || me.power >= 1) && me.onGround && b.vy > 0) {
-    const dx = bx - px;
-    const h = GROUND_Y - b.y;
+  const wantJump = lastChance || me.power >= 1 || (!wantSet && (mustSend || ai.smash));
+  if (incoming && wantJump && me.onGround && b.vy > 0) {
     if (dx > -R * 0.9 && dx < R * 0.25 && h > R + 75 && h < R + 165) out.jump = true;
   }
+  // in the air next to the ball: hold the aim direction for the spike
+  if (!me.onGround && contactSoon && b.vy > -200) out.move = (ai.aim < 0 ? -1 : ai.aim > 0 ? 1 : 0) * m;
+
   // ball resting on us / wedged against the net: pop it up
   if (!b.held && !b.dead && me.onGround && bx > NET_X && Math.hypot(b.vx, b.vy) < 70 &&
-      Math.hypot(bx - px, b.y - me.y) < R + BALL_R + 6) out.jump = true;
+      Math.hypot(dx, b.y - me.y) < R + BALL_R + 6) out.jump = true;
   me.speedMul = sk.speed;
   return out;
 }

@@ -75,14 +75,14 @@ button { font-family: inherit; }
 .actions .btn { flex: 1; max-width: 260px; }
 input[type=range] { flex: 1; pointer-events: auto; accent-color: var(--gold); height: 28px; cursor: pointer; }
 
-.help-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
-.card { border-radius: 18px; padding: 14px 16px; background: rgba(0, 0, 0, .25); border-top: 5px solid; }
+.help-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.card { border-radius: 18px; padding: 10px 14px; background: rgba(0, 0, 0, .25); border-top: 5px solid; }
 .card.t0 { border-color: var(--p0); } .card.t1 { border-color: var(--p1); }
 .card h3 { font-size: 18px; margin-bottom: 8px; }
-.keys { font-size: 15px; margin: 6px 0; opacity: .92; }
+.keys { font-size: 14.5px; margin: 4px 0; opacity: .92; }
 kbd { display: inline-block; min-width: 30px; text-align: center; padding: 3px 8px; margin-right: 4px; border-radius: 8px;
   background: #fff; color: var(--ink); font-family: inherit; font-weight: 600; box-shadow: 0 3px 0 #b9c6dd; }
-.rules { list-style: none; font-size: 15.5px; line-height: 1.5; }
+.rules { list-style: none; font-size: 14.5px; line-height: 1.4; }
 .rules li { padding-left: 26px; position: relative; margin-bottom: 6px; opacity: .95; }
 .rules li::before { content: ''; position: absolute; left: 4px; top: .45em; width: 10px; height: 10px; border-radius: 50%;
   background: var(--gold); }
@@ -175,6 +175,13 @@ kbd { display: inline-block; min-width: 30px; text-align: center; padding: 3px 8
 .power.full i { background: linear-gradient(90deg, #fff3b0, #ffc23d, #ff5a2d); }
 @keyframes pulse { from { transform: scaleY(1); } to { transform: scaleY(1.5); } }
 
+.touches { display: flex; gap: 4px; align-items: center; height: 9px; }
+.touches i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255, 255, 255, .18); transition: background .15s, transform .15s; }
+.touches i.on { background: #fff; transform: scale(1.15); }
+.touches.last i.on { background: #ff5a3c; box-shadow: 0 0 8px #ff5a3c; }
+.team.t0 .touches { flex-direction: row-reverse; }
+.touch .bump { background: rgba(111, 220, 106, .5); }
+
 #pops { position: absolute; inset: 0; pointer-events: none; }
 .pop-text { position: absolute; translate: -50% -50%; font-size: clamp(20px, 4.2vh, 40px); font-weight: 700; letter-spacing: .04em;
   white-space: nowrap; color: #fff; -webkit-text-stroke: .16em var(--ink); paint-order: stroke fill;
@@ -193,6 +200,8 @@ kbd { display: inline-block; min-width: 30px; text-align: center; padding: 3px 8
 @keyframes flash { 0% { opacity: .75; } 100% { opacity: 0; } }
 .banner.fire { color: #ff6a1f; -webkit-text-stroke: .07em #fff3b0; }
 .touch .dash { margin-left: auto; background: rgba(62, 166, 255, .5); }
+.touch .bump { margin-left: auto; }
+.touch .dash { margin-left: 0; }
 .touch .dash + .jump { margin-left: 0; }
 
 /* ---------------------------------------------------------------- colour swatches, cup, online lobby */

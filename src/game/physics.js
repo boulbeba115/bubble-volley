@@ -2,7 +2,7 @@
 import {
   W, GROUND_Y, NET_X, NET_TOP, NET_R, BUBBLE_R, BALL_R, GRAVITY, BALL_GRAVITY,
   WALL_RESTITUTION, BALL_RESTITUTION, MAX_SPEED, SUPER_SPEED, PLAYER_SPEED, JUMP_FORCE,
-  DASH_SPEED, DASH_TIME, DASH_CD, POWER_PER_HIT,
+  DASH_SPEED, DASH_TIME, DASH_CD, POWER_PER_HIT, MAX_TOUCHES, BUMP_WINDOW, BUMP_CD,
 } from '../config.js';
 
 const HOME = [NET_X - 230, NET_X + 230];
@@ -15,6 +15,8 @@ export function createWorld(style = {}) {
     ball: { x: NET_X, y: 150, vx: 0, vy: 0, r: rules.ballR, held: true, spin: 0, hitCd: 0, dead: false, fire: false, moonT: 0 },
     pickup: null,           // { x, y, r, type, life }
     lastHit: -1,
+    touches: [0, 0],        // consecutive touches by each side since the ball last crossed the net
+    touchCd: 0,             // contacts closer together than this count as one touch
     events: [],
   };
 }
@@ -23,15 +25,17 @@ function makePlayer(side) {
   return {
     side, x: HOME[side], y: GROUND_Y, r: BUBBLE_R, vx: 0, vy: 0, onGround: true, speedMul: 1,
     facing: side === 0 ? 1 : -1, dashT: 0, dashCd: 0, dashDir: 0, dashHeld: false,
+    bumpT: 0, bumpCd: 0, bumpHeld: false, move: 0,
     power: 0, bigT: 0, fastT: 0, slowT: 0,
   };
 }
 
 export function resetPositions(world, serverSide) {
-  world.players.forEach((p, i) => { p.x = HOME[i]; p.y = GROUND_Y; p.vx = p.vy = 0; p.onGround = true; p.dashT = 0; });
+  world.players.forEach((p, i) => { p.x = HOME[i]; p.y = GROUND_Y; p.vx = p.vy = 0; p.onGround = true; p.dashT = 0; p.bumpT = 0; });
   const b = world.ball;
   b.x = HOME[serverSide]; b.y = 190; b.vx = 0; b.vy = 0; b.held = true; b.dead = false; b.spin = 0; b.fire = false;
   world.lastHit = -1;
+  world.touches[0] = world.touches[1] = 0;
   world.pickup = null;
 }
 
@@ -51,10 +55,12 @@ function clampSpeed(b) {
 }
 
 function stepPlayer(world, p, input, dt) {
-  p.dashCd -= dt;
+  p.dashCd -= dt; p.bumpCd -= dt;
+  p.bumpT = Math.max(0, p.bumpT - dt);
   p.bigT = Math.max(0, p.bigT - dt); p.fastT = Math.max(0, p.fastT - dt); p.slowT = Math.max(0, p.slowT - dt);
   const targetR = BUBBLE_R * (p.bigT > 0 ? 1.4 : 1);
   p.r += (targetR - p.r) * Math.min(1, 8 * dt);
+  p.move = input.move || 0;
   if (input.move) p.facing = Math.sign(input.move);
 
   if (input.dash && !p.dashHeld && p.dashCd <= 0) {
@@ -62,6 +68,13 @@ function stepPlayer(world, p, input, dt) {
     world.events.push({ type: 'dash', side: p.side, x: p.x, y: p.y, dir: p.dashDir });
   }
   p.dashHeld = !!input.dash;
+
+  // bump: a short window in which the next touch becomes a soft, controlled set
+  if (input.bump && !p.bumpHeld && p.bumpCd <= 0) {
+    p.bumpT = BUMP_WINDOW; p.bumpCd = BUMP_CD;
+    world.events.push({ type: 'bumpReady', side: p.side, x: p.x, y: p.y });
+  }
+  p.bumpHeld = !!input.bump;
 
   const mul = p.speedMul * (p.fastT > 0 ? 1.4 : 1) * (p.slowT > 0 ? 0.5 : 1);
   if (p.dashT > 0) {
@@ -99,10 +112,32 @@ function superSpike(world, ball, p) {
   }
   const len = Math.hypot(dx, dy) || 1;
   ball.vx = dx / len * SUPER_SPEED; ball.vy = dy / len * SUPER_SPEED;
-  ball.fire = true; ball.hitCd = 0.12;
+  ball.fire = true;
   p.power = 0;
-  world.lastHit = p.side;
   world.events.push({ type: 'super', side: p.side, x: ball.x, y: ball.y });
+}
+
+// Aimed spike: a jumping player drives the ball just over the tape.
+// Holding toward the net = hard and deep, neutral = medium, holding away = soft drop shot.
+function trySpike(world, ball, p) {
+  const dir = p.side === 0 ? 1 : -1;
+  const aim = p.move * dir;                         // 1 forward, 0 neutral, -1 back
+  const g = BALL_GRAVITY * world.rules.ballG * (ball.moonT > 0 ? 0.5 : 1);
+  const d = Math.max(8, Math.abs(NET_X - ball.x));
+  // try the requested shot first, then stronger ones if it cannot reach the net from here
+  const shots = aim > 0 ? [[740, 3]] : aim < 0 ? [[360, 1], [600, 2], [740, 3]] : [[600, 2], [740, 3]];
+  for (const [S, kind] of shots) {
+    const up = ball.y - (NET_TOP - ball.r - 26 - (kind === 1 ? 30 : 0));   // tape-clearing point, relative to the ball
+    // flattest launch angle that passes through that point (projectile through a point)
+    const S2 = S * S, disc = S2 * S2 - g * (g * d * d + 2 * up * S2);
+    if (disc < 0) continue;                         // out of reach at this speed
+    const tan = (S2 - Math.sqrt(disc)) / (g * d);
+    if (tan > 1.1) continue;                        // ball is too low to drive over the net
+    const cos = 1 / Math.sqrt(1 + tan * tan);
+    ball.vx = dir * S * cos; ball.vy = -S * cos * tan;
+    return kind;                                    // 3 = power, 2 = spike, 1 = drop
+  }
+  return 0;                                         // no spike possible: normal bounce
 }
 
 // Player is a half disc (dome) sitting on its flat base at p.y.
@@ -119,24 +154,55 @@ function collidePlayer(world, ball, p) {
   ball.x = cx + nx * minDist; ball.y = cy + ny * minDist;
   const velN = (ball.vx - p.vx) * nx + (ball.vy - p.vy) * ny;
   if (velN >= 0) return;
-  if (p.power >= 1 && !p.onGround && ball.y < p.y) { superSpike(world, ball, p); return; }
+
+  const above = ball.y < p.y;
+  const solid = ball.hitCd <= 0 && (velN < -45 || p.bumpT > 0);   // a real touch, not the ball resting on us
+  if (!solid) {
+    ball.vx -= (1 + BALL_RESTITUTION) * velN * nx; ball.vy -= (1 + BALL_RESTITUTION) * velN * ny;
+    clampSpeed(ball);
+    return;
+  }
+
+  // --- touch rule: at most MAX_TOUCHES per side before the ball must cross the net
+  if (world.touchCd <= 0 || world.lastHit !== p.side) {
+    world.touches[p.side]++;
+    world.touchCd = 0.25;
+    if (world.touches[p.side] > MAX_TOUCHES) {
+      ball.dead = true; ball.fire = false;
+      ball.vx *= 0.3; ball.vy = Math.min(ball.vy, -120);
+      world.events.push({ type: 'fault', side: p.side, x: ball.x, y: ball.y });
+      return;
+    }
+  }
+  world.lastHit = p.side;
+  ball.hitCd = 0.09;
+
+  if (p.power >= 1 && !p.onGround && above) { superSpike(world, ball, p); return; }
+
   const wasFire = ball.fire;
-  const j = -(1 + BALL_RESTITUTION) * velN;
-  ball.vx += j * nx + p.vx * 0.4;
-  ball.vy += j * ny + p.vy * 0.4;
+  let bump = false, spike = 0;
+  if (p.bumpT > 0 && above) {
+    // soft set: straight up with a little drift, perfect for a follow-up spike
+    ball.vx = ball.vx * 0.12 + p.vx * 0.3;
+    ball.vy = -590;
+    p.bumpT = 0; bump = true;
+  } else if (!p.onGround && above) {
+    spike = trySpike(world, ball, p);
+  }
+  if (!bump && !spike) {
+    const j = -(1 + BALL_RESTITUTION) * velN;
+    ball.vx += j * nx + p.vx * 0.4;
+    ball.vy += j * ny + p.vy * 0.4;
+  }
   ball.fire = false;
   clampSpeed(ball);
   ball.spin = (ball.vx * 0.012) + (p.vx * 0.01);
-  if (ball.hitCd <= 0 && velN < -45) {
-    world.lastHit = p.side;
-    p.power = Math.min(1, p.power + POWER_PER_HIT * world.rules.powerGain);
-    world.events.push({
-      type: 'hit', side: p.side, x: ball.x - nx * ball.r, y: ball.y - ny * ball.r,
-      speed: Math.hypot(ball.vx, ball.vy), blocked: wasFire, low: GROUND_Y - ball.y < 70, dashing: p.dashT > 0,
-      charged: p.power >= 1,
-    });
-    ball.hitCd = 0.09;
-  }
+  p.power = Math.min(1, p.power + POWER_PER_HIT * world.rules.powerGain);
+  world.events.push({
+    type: 'hit', side: p.side, x: ball.x - nx * ball.r, y: ball.y - ny * ball.r,
+    speed: Math.hypot(ball.vx, ball.vy), blocked: wasFire, low: GROUND_Y - ball.y < 70, dashing: p.dashT > 0,
+    charged: p.power >= 1, bump, spike, touches: world.touches[p.side],
+  });
 }
 
 function collideNet(world, ball) {
@@ -161,10 +227,12 @@ function stepBall(world, dt) {
   const ball = world.ball;
   if (ball.held) return;
   ball.hitCd -= dt;
+  world.touchCd -= dt;
   ball.moonT = Math.max(0, ball.moonT - dt);
   ball.vy += BALL_GRAVITY * world.rules.ballG * (ball.moonT > 0 ? 0.5 : 1) * dt;
   const drag = Math.pow(0.996, dt * 60);
   ball.vx *= drag; ball.vy *= drag;
+  const sideBefore = ball.x < NET_X;
   ball.x += ball.vx * dt;
   ball.y += ball.vy * dt;
 
@@ -176,6 +244,7 @@ function stepBall(world, dt) {
     world.events.push({ type: 'wall', x: W, y: ball.y, speed: Math.abs(ball.vx) });
   }
   collideNet(world, ball);
+  if ((ball.x < NET_X) !== sideBefore) { world.touches[0] = world.touches[1] = 0; }   // crossed the net
   if (!ball.dead) for (const p of world.players) collidePlayer(world, ball, p);
   clampSpeed(ball);
 

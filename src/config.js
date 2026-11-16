@@ -22,6 +22,9 @@ export const DASH_SPEED = 860;
 export const DASH_TIME = 0.15;
 export const DASH_CD = 0.7;
 export const POWER_PER_HIT = 0.2;      // super meter gained per touch
+export const MAX_TOUCHES = 3;          // touches a side may use before the ball must cross the net
+export const BUMP_WINDOW = 0.3;        // seconds a bump stays armed after pressing the button
+export const BUMP_CD = 0.45;
 
 export const POWERUPS = {
   big:   { icon: '🍄', label: 'JUMBO!',     color: '#6fdc6a' },
@@ -58,9 +61,9 @@ export const CUP = [
 ];
 
 export const DIFFICULTY = {
-  easy:   { label: 'Easy',   speed: 0.74, noise: 40, jump: 0.3, aim: 10, blunder: 0.22, react: 0.34, dash: 0 },
-  medium: { label: 'Medium', speed: 0.86, noise: 28, jump: 0.6, aim: 20, blunder: 0.17, react: 0.2, dash: 0.5 },
-  hard:   { label: 'Hard',   speed: 1.0, noise: 10, jump: 0.95, aim: 30, blunder: 0.09, react: 0.08, dash: 1 },
+  easy:   { label: 'Easy',   speed: 0.74, noise: 40, jump: 0.3, aim: 10, blunder: 0.22, react: 0.34, dash: 0, set: 0.15 },
+  medium: { label: 'Medium', speed: 0.86, noise: 28, jump: 0.6, aim: 20, blunder: 0.17, react: 0.2, dash: 0.5, set: 0.45 },
+  hard:   { label: 'Hard',   speed: 1.0, noise: 10, jump: 0.95, aim: 30, blunder: 0.09, react: 0.08, dash: 1, set: 0.75 },
 };
 
 export const ARENAS = {
